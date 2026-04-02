@@ -1059,10 +1059,11 @@ function SubletApp() {
 
   const saveListingToDB = async (listingId) => {
     const { data: { session } } = await supabase.auth.getSession();
-    console.log("saveListingToDB called, listingId:", listingId, "session:", session?.user?.id);
-    if (!session) { console.log("NO SESSION - skipping save"); return; }
-    const { data, error } = await supabase.from("saved_listings").upsert({ user_id: session.user.id, listing_id: listingId }, { onConflict: "user_id,listing_id" });
-    console.log("upsert result:", data, "error:", error);
+    if (!session) return;
+    const { data: existing } = await supabase.from("saved_listings").select("id").eq("user_id", session.user.id).eq("listing_id", listingId).maybeSingle();
+    if (existing) return;
+    const { error } = await supabase.from("saved_listings").insert({ user_id: session.user.id, listing_id: listingId });
+    if (error) console.log("save error:", error.message);
   };
 
   const unsaveListingFromDB = async (listingId) => {
