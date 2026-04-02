@@ -1642,7 +1642,7 @@ function SubletApp() {
             }}>
               {Icons.bookmark({ size: 16 })}
             </button>
-            <button className="card-bookmark" title="Report this listing" style={{ top: 60, background: "rgba(196,69,58,0.15)" }} onClick={e => {
+            <button className="card-bookmark" title="Report this listing" style={{ top: 60, right: 16, background: "rgba(196,69,58,0.15)", color: "var(--danger)" }} onClick={e => {
               e.stopPropagation();
               setReportListing(listing);
             }}>
