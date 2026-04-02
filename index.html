@@ -1051,7 +1051,7 @@ function SubletApp() {
       const { data } = await supabase.from("saved_listings").select("listing_id").eq("user_id", session.user.id);
       if (data && data.length > 0) {
         const ids = data.map(r => r.listing_id);
-        const matched = LISTINGS.filter(l => ids.includes(l.id));
+        const matched = SAMPLE_LISTINGS.filter(l => ids.includes(l.id));
         setSavedListings(matched);
       }
     })();
