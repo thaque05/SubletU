@@ -1633,7 +1633,9 @@ function SubletApp() {
               {listing.posted.includes("Just") || listing.posted.includes("hour") ?
                 <span className="card-badge badge-new">New</span> : null}
             </div>
-            <button className="card-bookmark" title="Bookmark this listing" onClick={e => {
+            <button className="card-bookmark" title="Bookmark this listing"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => {
               e.stopPropagation();
               if (!savedListings.find(l => l.id === listing.id)) {
                 setSavedListings(prev => [...prev, listing]);
@@ -1642,7 +1644,9 @@ function SubletApp() {
             }}>
               {Icons.bookmark({ size: 16 })}
             </button>
-            <button className="card-bookmark" title="Report this listing" style={{ top: 60, right: 16, background: "rgba(196,69,58,0.15)", color: "var(--danger)" }} onClick={e => {
+            <button className="card-bookmark" title="Report this listing" style={{ top: 60, right: 16, background: "rgba(196,69,58,0.15)", color: "var(--danger)" }} 
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => {
               e.stopPropagation();
               setReportListing(listing);
             }}>
