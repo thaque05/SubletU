@@ -1065,6 +1065,7 @@ function SubletApp() {
   const [justAdvanced, setJustAdvanced] = useState(false);
   const [reportListing, setReportListing] = useState(null);
   const [reportReason, setReportReason] = useState("");
+  const [reportMessage, setReportMessage] = useState("");
   const [openChat, setOpenChat] = useState(null);
   const [chatInput, setChatInput] = useState("");
   const [msgCompose, setMsgCompose] = useState(null); // { listing } or null
@@ -1698,7 +1699,7 @@ function SubletApp() {
           <button className="action-btn like" title="Save this listing" onClick={() => handleActionBtn("like")}>
             {Icons.heart({ size: 26 })}
           </button>
-          <button className="action-btn" title="Report this listing" style={{ borderColor: "var(--danger)", color: "var(--danger)" }} onClick={() => { setReportListing(listing); handleActionBtn("pass"); }}>
+          <button className="action-btn" title="Report this listing" style={{ borderColor: "var(--danger)", color: "var(--danger)" }} onClick={() => { setReportListing(listing); }}>
             {Icons.flag({ size: 20 })}
           </button>
         </div>
@@ -2695,13 +2696,13 @@ function SubletApp() {
       })()}
 
       {reportListing && (
-        <div className="detail-overlay" onClick={() => { setReportListing(null); setReportReason(""); }}>
-          <div className="detail-sheet" style={{ maxHeight: "60vh", padding: 24 }} onClick={e => e.stopPropagation()}>
+        <div className="detail-overlay" onClick={() => { setReportListing(null); setReportReason(""); setReportMessage(""); }}>
+          <div className="detail-sheet" style={{ maxHeight: "70vh", padding: 24, overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Report Listing</div>
             <div style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 16 }}>
               Help keep SubletU safe. What's wrong with <strong>{reportListing.title}</strong>?
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
               {["Fraudulent or fake listing", "Incorrect information", "Already rented/unavailable", "Inappropriate content", "Spam", "Other"].map(reason => (
                 <button key={reason} onClick={() => setReportReason(reason)}
                   style={{
@@ -2713,12 +2714,30 @@ function SubletApp() {
                   }}>{reason}</button>
               ))}
             </div>
-            <button className="btn-primary" style={{ background: "var(--danger)" }}
-              onClick={() => {
-                if (!reportReason) { showToast("Please select a reason"); return; }
-                showToast("✅ Report submitted — thank you!");
-                setReportListing(null); setReportReason("");
-              }}>Submit Report</button>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                Additional details (optional)
+              </div>
+              <textarea className="form-input" rows={3}
+                placeholder="Tell us more about why this listing seems fraudulent..."
+                value={reportMessage}
+                onChange={e => setReportMessage(e.target.value)}
+                style={{ resize: "none" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn-secondary" style={{ width: "auto", padding: "12px 20px" }}
+                onClick={() => { setReportListing(null); setReportReason(""); setReportMessage(""); }}>
+                Cancel
+              </button>
+              <button className="btn-primary" style={{ background: "var(--danger)" }}
+                onClick={() => {
+                  if (!reportReason) { showToast("Please select a reason"); return; }
+                  showToast("✅ Report submitted — thank you!");
+                  setReportListing(null); setReportReason(""); setReportMessage("");
+                  handleActionBtn("pass");
+                }}>Submit Report</button>
+            </div>
           </div>
         </div>
       )}
