@@ -1698,7 +1698,7 @@ function SubletApp() {
           <button className="action-btn like" title="Save this listing" onClick={() => handleActionBtn("like")}>
             {Icons.heart({ size: 26 })}
           </button>
-          <button className="action-btn" title="Report this listing" style={{ borderColor: "var(--danger)", color: "var(--danger)" }} onClick={() => setReportListing(listing)}>
+          <button className="action-btn" title="Report this listing" style={{ borderColor: "var(--danger)", color: "var(--danger)" }} onClick={() => { setReportListing(listing); handleActionBtn("pass"); }}>
             {Icons.flag({ size: 20 })}
           </button>
         </div>
