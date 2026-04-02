@@ -1644,14 +1644,6 @@ function SubletApp() {
             }}>
               {Icons.bookmark({ size: 16 })}
             </button>
-            <button className="card-bookmark" title="Report this listing" style={{ top: 60, right: 16, background: "rgba(196,69,58,0.15)", color: "var(--danger)" }} 
-              onPointerDown={e => e.stopPropagation()}
-              onClick={e => {
-              e.stopPropagation();
-              setReportListing(listing);
-            }}>
-              {Icons.flag({ size: 16 })}
-            </button>
             <div className="swipe-indicator right" style={{ opacity: likeOpacity > 0 ? likeOpacity : 0 }}>SAVE</div>
             <div className="swipe-indicator left" style={{ opacity: passOpacity > 0 ? passOpacity : 0 }}>PASS</div>
 
@@ -1705,6 +1697,9 @@ function SubletApp() {
           </button>
           <button className="action-btn like" title="Save this listing" onClick={() => handleActionBtn("like")}>
             {Icons.heart({ size: 26 })}
+          </button>
+          <button className="action-btn" title="Report this listing" style={{ borderColor: "var(--danger)", color: "var(--danger)" }} onClick={() => setReportListing(listing)}>
+            {Icons.flag({ size: 20 })}
           </button>
         </div>
       </div>
