@@ -389,7 +389,10 @@ body {
 .card-stack {
   position: relative;
   width: 100%;
-  height: clamp(300px, calc(100vh - 370px), 520px);
+  height: clamp(340px, calc(100vh - 345px), 540px);
+}
+@media (max-width: 480px) {
+  .card-stack { height: clamp(300px, calc(100svh - 400px), 460px); }
 }
 .swipe-card {
   position: absolute;
@@ -1976,13 +1979,25 @@ function SubletApp() {
         </div>
       ) : (
         savedListings.map(l => (
-          <div key={l.id} className="listing-row" onClick={() => setDetailListing(l)}>
-            <ListingImage listing={l} className="listing-row-img" showControls={true} />
-            <div className="listing-row-info">
-              <div className="listing-row-title">{l.title}</div>
-              <div className="listing-row-price">{priceLabel(l)}</div>
-              <div className="listing-row-meta">{l.bedrooms} bed · {l.bathrooms} bath · {l.availableRooms} avail · {l.address}</div>
+          <div key={l.id} style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <div className="listing-row" style={{ flex: 1 }} onClick={() => setDetailListing(l)}>
+              <ListingImage listing={l} className="listing-row-img" showControls={true} />
+              <div className="listing-row-info">
+                <div className="listing-row-title">{l.title}</div>
+                <div className="listing-row-price">{priceLabel(l)}</div>
+                <div className="listing-row-meta">{l.bedrooms} bed · {l.bathrooms} bath · {l.availableRooms} avail · {l.address}</div>
+              </div>
             </div>
+            <button onClick={async e => {
+              e.stopPropagation();
+              setSavedListings(prev => prev.filter(s => s.id !== l.id));
+              await unsaveListingFromDB(l.id);
+            }} style={{
+              flexShrink: 0, marginLeft: 8, width: 32, height: 32, borderRadius: "50%",
+              border: "1.5px solid var(--danger)", background: "none",
+              color: "var(--danger)", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", fontSize: 16
+            }} title="Remove from saved">✕</button>
           </div>
         ))
       )}
@@ -2364,61 +2379,55 @@ function SubletApp() {
       const hasUnread = convo.msgs.some(m => !m.read && m.from !== "You");
       const isArchived = archivedMessageIds.includes(convo.name);
       return (
-        <div key={ci} style={{ position: "relative", overflow: "hidden" }}>
-          {/* Swipe reveal archive button - hidden behind row */}
-          <div style={{
-            position: "absolute", right: 0, top: 0, bottom: 0,
-            width: 90, background: "var(--accent)", display: "flex",
-            alignItems: "center", justifyContent: "center",
-            color: "white", fontSize: 13, fontWeight: 600,
-            borderBottom: "1px solid var(--border)", userSelect: "none"
-          }}>
-            {isArchived ? "Unarchive" : "Archive"}
-          </div>
-          {/* Row - draggable to reveal archive */}
-          <div style={{
-            display: "flex", gap: 12, padding: "14px 0",
-            borderBottom: "1px solid var(--border)", cursor: "pointer",
-            background: "var(--bg-primary)", position: "relative", zIndex: 1,
-            transition: "transform 0.25s ease",
-            WebkitTransition: "transform 0.25s ease"
-          }}
-          onMouseDown={e => { e.currentTarget._startX = e.clientX; e.currentTarget._dragging = false; }}
-          onMouseMove={e => {
-            if (!e.buttons) return;
-            const dx = e.clientX - e.currentTarget._startX;
-            e.currentTarget._dragging = true;
-            if (dx < -10) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
-          }}
-          onMouseUp={e => {
-            const dx = e.clientX - e.currentTarget._startX;
-            if (dx < -50) {
-              setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]);
-            }
-            e.currentTarget.style.transform = "translateX(0)";
-          }}
-          onTouchStart={e => { e.currentTarget._startX = e.touches[0].clientX; }}
-          onTouchMove={e => {
-            const dx = e.touches[0].clientX - e.currentTarget._startX;
-            if (dx < -10) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
-          }}
-          onTouchEnd={e => {
-            const dx = e.changedTouches[0].clientX - e.currentTarget._startX;
-            if (dx < -50) {
-              setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]);
-            }
-            e.currentTarget.style.transform = "translateX(0)";
-          }}
-          onClick={e => {
-            if (e.currentTarget._dragging) { e.currentTarget._dragging = false; return; }
-            setMessages(prev => prev.map(m => {
-              const other = m.from === "You" ? m.to : m.from;
-              if (other === convo.name && !m.read) return { ...m, read: true };
-              return m;
-            }));
-            setOpenChat(convo.name);
-            setChatInput("");
-          }}>
+        <div key={ci} style={{ position: "relative" }}>
+          <div
+            style={{
+              display: "flex", gap: 12, padding: "14px 0",
+              borderBottom: "1px solid var(--border)", cursor: "pointer",
+              background: "var(--bg-primary)", position: "relative", zIndex: 1,
+              transition: "transform 0.25s ease"
+            }}
+            onMouseDown={e => { e.currentTarget._startX = e.clientX; e.currentTarget._swiped = false; }}
+            onMouseMove={e => {
+              if (!e.buttons) return;
+              const dx = e.clientX - e.currentTarget._startX;
+              if (dx < -15) {
+                e.currentTarget._swiped = true;
+                e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+                e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.opacity = Math.min(Math.abs(dx)/90, 1));
+              }
+            }}
+            onMouseUp={e => {
+              const dx = e.clientX - e.currentTarget._startX;
+              if (dx < -50) { setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]); }
+              e.currentTarget.style.transform = "translateX(0)";
+              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.opacity = 0);
+            }}
+            onTouchStart={e => { e.currentTarget._startX = e.touches[0].clientX; e.currentTarget._swiped = false; }}
+            onTouchMove={e => {
+              const dx = e.touches[0].clientX - e.currentTarget._startX;
+              if (dx < -15) {
+                e.currentTarget._swiped = true;
+                e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+                e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.opacity = Math.min(Math.abs(dx)/90, 1));
+              }
+            }}
+            onTouchEnd={e => {
+              const dx = e.changedTouches[0].clientX - e.currentTarget._startX;
+              if (dx < -50) { setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]); }
+              e.currentTarget.style.transform = "translateX(0)";
+              e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.opacity = 0);
+            }}
+            onClick={e => {
+              if (e.currentTarget._swiped) { e.currentTarget._swiped = false; return; }
+              setMessages(prev => prev.map(m => {
+                const other = m.from === "You" ? m.to : m.from;
+                if (other === convo.name && !m.read) return { ...m, read: true };
+                return m;
+              }));
+              setOpenChat(convo.name);
+              setChatInput("");
+            }}>
             <div className="poster-avatar" style={{ width: 48, height: 48, fontSize: 15 }}>{initial}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
@@ -2433,6 +2442,15 @@ function SubletApp() {
             {hasUnread && (
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", alignSelf: "center", flexShrink: 0 }} />
             )}
+          </div>
+          <div style={{
+            position: "absolute", right: 0, top: 0, bottom: 0, width: 90,
+            background: "var(--accent)", display: "flex", alignItems: "center",
+            justifyContent: "center", color: "white", fontSize: 13, fontWeight: 600,
+            opacity: 0, pointerEvents: "none", zIndex: 0,
+            borderBottom: "1px solid var(--border)"
+          }}>
+            {isArchived ? "Unarchive" : "Archive"}
           </div>
         </div>
       );
