@@ -389,8 +389,9 @@ body {
 .card-stack {
   position: relative;
   width: 100%;
-  max-height: calc(100vh - 340px);
-  min-height: 320px;
+  height: calc(100vh - 300px);
+  min-height: 420px;
+  max-height: 680px;
 }
 .swipe-card {
   position: absolute;
@@ -1092,6 +1093,8 @@ function SubletApp() {
     { id: 2, from: "Lena K.", to: "You", listingTitle: "3BR House — Westcott", listingId: 3, text: "Yes it is! Want to schedule a tour?", time: "1 hour ago", read: true },
     { id: 3, from: "Lena K.", to: "You", listingTitle: "3BR House — Westcott", listingId: 3, text: "We could do Saturday afternoon if that works for you", time: "45 min ago", read: false },
     { id: 4, from: "You", to: "Priya S.", listingTitle: "2BR on University Hill", listingId: 5, text: "Hey, is the 2BR available for May-August?", time: "30 min ago", read: false },
+    { id: 5, from: "Priya S.", to: "You", listingTitle: "2BR on University Hill", listingId: 5, text: "Yes! It's available May through August. Want to schedule a showing?", time: "25 min ago", read: false },
+    { id: 6, from: "You", to: "Jordan M.", listingTitle: "Copper Beech Commons — 2BR", listingId: 1, text: "Hi Jordan, is the Copper Beech listing still available?", time: "10 min ago", read: true },
   ]);
   
   // Filters
@@ -2340,65 +2343,97 @@ function SubletApp() {
       );
     }
 
+    // Split into active and archived
+    const activeConvos = convos.filter(c => !archivedMessageIds.includes(c.name));
+    const archivedConvos = convos.filter(c => archivedMessageIds.includes(c.name));
+
+    const renderConvoRow = (convo, ci) => {
+      const lastMsg = convo.msgs[convo.msgs.length - 1];
+      const initial = convo.name.split(" ").map(w => w[0]).join("");
+      const hasUnread = convo.msgs.some(m => !m.read && m.from !== "You");
+      const isArchived = archivedMessageIds.includes(convo.name);
+      return (
+        <div key={ci} style={{ position: "relative", overflow: "hidden" }}>
+          {/* Swipe reveal archive button */}
+          <div style={{
+            position: "absolute", right: 0, top: 0, bottom: 0,
+            width: 90, background: "var(--accent)", display: "flex",
+            alignItems: "center", justifyContent: "center",
+            color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer",
+            borderBottom: "1px solid var(--border)"
+          }} onClick={() => setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name])}>
+            {isArchived ? "Unarchive" : "Archive"}
+          </div>
+          {/* Row - draggable to reveal */}
+          <div style={{
+            display: "flex", gap: 12, padding: "14px 0",
+            borderBottom: "1px solid var(--border)", cursor: "pointer",
+            background: "var(--bg-primary)", position: "relative", zIndex: 1,
+            transition: "transform 0.2s"
+          }}
+          onTouchStart={e => { e._startX = e.touches[0].clientX; }}
+          onTouchMove={e => {
+            const dx = e.touches[0].clientX - e._startX;
+            if (dx < -20) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+          }}
+          onTouchEnd={e => {
+            const dx = e.changedTouches[0].clientX - e._startX;
+            if (dx < -50) {
+              setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]);
+            }
+            e.currentTarget.style.transform = "translateX(0)";
+          }}
+          onClick={() => {
+            setMessages(prev => prev.map(m => {
+              const other = m.from === "You" ? m.to : m.from;
+              if (other === convo.name && !m.read) return { ...m, read: true };
+              return m;
+            }));
+            setOpenChat(convo.name);
+            setChatInput("");
+          }}>
+            <div className="poster-avatar" style={{ width: 48, height: 48, fontSize: 15 }}>{initial}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{convo.name}</span>
+                <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{lastMsg.time}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "var(--accent)", marginBottom: 3 }}>Re: {convo.listing}</div>
+              <div style={{ fontSize: 13, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {lastMsg.from === "You" ? "You: " : ""}{lastMsg.text}
+              </div>
+            </div>
+            {hasUnread && (
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", alignSelf: "center", flexShrink: 0 }} />
+            )}
+          </div>
+        </div>
+      );
+    };
+
     // Conversations list
     return (
       <div className="page">
         <div className="page-title">Messages</div>
-        <div className="page-subtitle">{convos.length} conversation{convos.length !== 1 ? "s" : ""}</div>
-        {convos.length === 0 ? (
+        <div className="page-subtitle">{activeConvos.length} conversation{activeConvos.length !== 1 ? "s" : ""}</div>
+        {activeConvos.length === 0 && archivedConvos.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">{Icons.chat({ size: 48 })}</div>
             <div className="empty-state-title">No messages yet</div>
             <p style={{ fontSize: 14 }}>Tap the message button on a listing to start a conversation</p>
           </div>
         ) : (
-          convos.filter(c => !deletedMessageIds.includes(c.name)).map((convo, ci) => {
-            const lastMsg = convo.msgs[convo.msgs.length - 1];
-            const initial = convo.name.split(" ").map(w => w[0]).join("");
-            const hasUnread = convo.msgs.some(m => !m.read && m.from !== "You");
-            const isArchived = archivedMessageIds.includes(convo.name);
-            return (
-              <div key={ci} style={{
-                display: "flex", gap: 12, padding: "14px 0",
-                borderBottom: "1px solid var(--border)", cursor: "pointer",
-                opacity: isArchived ? 0.5 : 1
-              }} onClick={() => {
-                // Mark all messages from this person as read
-                setMessages(prev => prev.map(m => {
-                  const other = m.from === "You" ? m.to : m.from;
-                  if (other === convo.name && !m.read) return { ...m, read: true };
-                  return m;
-                }));
-                setOpenChat(convo.name);
-                setChatInput("");
-              }}>
-                <div className="poster-avatar" style={{ width: 48, height: 48, fontSize: 15 }}>{initial}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                    <span style={{ fontWeight: 600, fontSize: 15 }}>{convo.name}</span>
-                    <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{lastMsg.time}</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: "var(--accent)", marginBottom: 3 }}>Re: {convo.listing}</div>
-                  <div style={{ fontSize: 13, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {lastMsg.from === "You" ? "You: " : ""}{lastMsg.text}
-                  </div>
+          <>
+            {activeConvos.map((convo, ci) => renderConvoRow(convo, ci))}
+            {archivedConvos.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Archived ({archivedConvos.length})
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignSelf: "center", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                  {hasUnread && (
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", alignSelf: "center" }} />
-                  )}
-                  <button onClick={e => { e.stopPropagation(); setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--text-tertiary)", padding: "2px 4px" }}>
-                    {isArchived ? "Unarchive" : "Archive"}
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); setDeletedMessageIds(prev => [...prev, convo.name]); }}
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--danger)", padding: "2px 4px" }}>
-                    Delete
-                  </button>
-                </div>
+                {archivedConvos.map((convo, ci) => renderConvoRow(convo, ci))}
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     );
