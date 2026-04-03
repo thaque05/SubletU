@@ -389,9 +389,7 @@ body {
 .card-stack {
   position: relative;
   width: 100%;
-  height: calc(100vh - 300px);
-  min-height: 420px;
-  max-height: 680px;
+  height: clamp(360px, calc(100vh - 320px), 520px);
 }
 .swipe-card {
   position: absolute;
@@ -2354,7 +2352,7 @@ function SubletApp() {
       const isArchived = archivedMessageIds.includes(convo.name);
       return (
         <div key={ci} style={{ position: "relative", overflow: "hidden" }}>
-          {/* Swipe reveal archive button */}
+          {/* Swipe reveal archive button - hidden behind row */}
           <div style={{
             position: "absolute", right: 0, top: 0, bottom: 0,
             width: 90, background: "var(--accent)", display: "flex",
@@ -2364,20 +2362,35 @@ function SubletApp() {
           }} onClick={() => setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name])}>
             {isArchived ? "Unarchive" : "Archive"}
           </div>
-          {/* Row - draggable to reveal */}
+          {/* Row - draggable to reveal archive */}
           <div style={{
             display: "flex", gap: 12, padding: "14px 0",
             borderBottom: "1px solid var(--border)", cursor: "pointer",
             background: "var(--bg-primary)", position: "relative", zIndex: 1,
-            transition: "transform 0.2s"
+            transition: "transform 0.25s ease",
+            WebkitTransition: "transform 0.25s ease"
           }}
-          onTouchStart={e => { e._startX = e.touches[0].clientX; }}
+          onMouseDown={e => { e.currentTarget._startX = e.clientX; e.currentTarget._dragging = false; }}
+          onMouseMove={e => {
+            if (!e.buttons) return;
+            const dx = e.clientX - e.currentTarget._startX;
+            e.currentTarget._dragging = true;
+            if (dx < -10) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+          }}
+          onMouseUp={e => {
+            const dx = e.clientX - e.currentTarget._startX;
+            if (dx < -50) {
+              setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]);
+            }
+            e.currentTarget.style.transform = "translateX(0)";
+          }}
+          onTouchStart={e => { e.currentTarget._startX = e.touches[0].clientX; }}
           onTouchMove={e => {
-            const dx = e.touches[0].clientX - e._startX;
-            if (dx < -20) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
+            const dx = e.touches[0].clientX - e.currentTarget._startX;
+            if (dx < -10) e.currentTarget.style.transform = `translateX(${Math.max(dx, -90)}px)`;
           }}
           onTouchEnd={e => {
-            const dx = e.changedTouches[0].clientX - e._startX;
+            const dx = e.changedTouches[0].clientX - e.currentTarget._startX;
             if (dx < -50) {
               setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]);
             }
