@@ -389,7 +389,7 @@ body {
 .card-stack {
   position: relative;
   width: 100%;
-  height: clamp(360px, calc(100vh - 320px), 520px);
+  height: clamp(300px, calc(100vh - 370px), 520px);
 }
 .swipe-card {
   position: absolute;
@@ -1042,6 +1042,15 @@ function SubletApp() {
   const [currentCard, setCurrentCard] = useState(0);
   const [savedListings, setSavedListings] = useState([]);
   const [passedListings, setPassedListings] = useState([]);
+
+  const resetBrowsing = async () => {
+    setPassedListings([]);
+    setSavedListings([]);
+    setCurrentCard(0);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) await supabase.from("saved_listings").delete().eq("user_id", session.user.id);
+    showToast("Reset! All listings are back.");
+  };
 
   useEffect(() => {
     if (!authed || !currentUser) return;
@@ -2216,6 +2225,10 @@ function SubletApp() {
         )}
       </div>
 
+      <button className="btn-secondary" style={{ marginBottom: 12 }}
+        onClick={resetBrowsing}>
+        🔄 Reset Browsing (Show All Listings Again)
+      </button>
       <button className="btn-secondary" style={{ marginBottom: 12, color: "var(--danger)", borderColor: "var(--danger)" }}
         onClick={logoutUser}>
         Sign Out
@@ -2357,9 +2370,9 @@ function SubletApp() {
             position: "absolute", right: 0, top: 0, bottom: 0,
             width: 90, background: "var(--accent)", display: "flex",
             alignItems: "center", justifyContent: "center",
-            color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer",
-            borderBottom: "1px solid var(--border)"
-          }} onClick={() => setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name])}>
+            color: "white", fontSize: 13, fontWeight: 600,
+            borderBottom: "1px solid var(--border)", userSelect: "none"
+          }}>
             {isArchived ? "Unarchive" : "Archive"}
           </div>
           {/* Row - draggable to reveal archive */}
@@ -2396,7 +2409,8 @@ function SubletApp() {
             }
             e.currentTarget.style.transform = "translateX(0)";
           }}
-          onClick={() => {
+          onClick={e => {
+            if (e.currentTarget._dragging) { e.currentTarget._dragging = false; return; }
             setMessages(prev => prev.map(m => {
               const other = m.from === "You" ? m.to : m.from;
               if (other === convo.name && !m.read) return { ...m, read: true };
