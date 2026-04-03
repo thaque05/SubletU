@@ -388,8 +388,9 @@ body {
 /* ─── Swipe Card Stack ─── */
 .card-stack {
   position: relative;
-  width: 100%; height: calc(100vh - 320px);
-  padding: 16px 16px 0;
+  width: 100%;
+  max-height: calc(100vh - 340px);
+  min-height: 320px;
 }
 .swipe-card {
   position: absolute;
@@ -1084,6 +1085,8 @@ function SubletApp() {
   const [chatInput, setChatInput] = useState("");
   const [msgCompose, setMsgCompose] = useState(null); // { listing } or null
   const [customMsgInput, setCustomMsgInput] = useState("");
+  const [deletedMessageIds, setDeletedMessageIds] = useState([]);
+  const [archivedMessageIds, setArchivedMessageIds] = useState([]);
   const [messages, setMessages] = useState([
     { id: 1, from: "You", to: "Lena K.", listingTitle: "3BR House — Westcott", listingId: 3, text: "Hi! Is the Westcott house still available for summer?", time: "2 hours ago", read: true },
     { id: 2, from: "Lena K.", to: "You", listingTitle: "3BR House — Westcott", listingId: 3, text: "Yes it is! Want to schedule a tour?", time: "1 hour ago", read: true },
@@ -1782,12 +1785,7 @@ function SubletApp() {
               <option value="4">4+ Bath</option>
             </select>
           </div>
-          <div>
-            <select className="form-select" value={postForm.rooms}
-              onChange={e => setPostForm(f => ({ ...f, rooms: e.target.value }))}>
-              {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} Room{n>1?"s":""}</option>)}
-            </select>
-          </div>
+
         </div>
       </div>
 
@@ -2354,14 +2352,16 @@ function SubletApp() {
             <p style={{ fontSize: 14 }}>Tap the message button on a listing to start a conversation</p>
           </div>
         ) : (
-          convos.map((convo, ci) => {
+          convos.filter(c => !deletedMessageIds.includes(c.name)).map((convo, ci) => {
             const lastMsg = convo.msgs[convo.msgs.length - 1];
             const initial = convo.name.split(" ").map(w => w[0]).join("");
             const hasUnread = convo.msgs.some(m => !m.read && m.from !== "You");
+            const isArchived = archivedMessageIds.includes(convo.name);
             return (
               <div key={ci} style={{
                 display: "flex", gap: 12, padding: "14px 0",
-                borderBottom: "1px solid var(--border)", cursor: "pointer"
+                borderBottom: "1px solid var(--border)", cursor: "pointer",
+                opacity: isArchived ? 0.5 : 1
               }} onClick={() => {
                 // Mark all messages from this person as read
                 setMessages(prev => prev.map(m => {
@@ -2383,9 +2383,19 @@ function SubletApp() {
                     {lastMsg.from === "You" ? "You: " : ""}{lastMsg.text}
                   </div>
                 </div>
-                {hasUnread && (
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", alignSelf: "center", flexShrink: 0 }} />
-                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignSelf: "center", flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                  {hasUnread && (
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--accent)", alignSelf: "center" }} />
+                  )}
+                  <button onClick={e => { e.stopPropagation(); setArchivedMessageIds(prev => isArchived ? prev.filter(n => n !== convo.name) : [...prev, convo.name]); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--text-tertiary)", padding: "2px 4px" }}>
+                    {isArchived ? "Unarchive" : "Archive"}
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); setDeletedMessageIds(prev => [...prev, convo.name]); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--danger)", padding: "2px 4px" }}>
+                    Delete
+                  </button>
+                </div>
               </div>
             );
           })
