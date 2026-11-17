@@ -8,9 +8,16 @@ test.beforeEach(async ({ page }) => {
   await expect(app.topCard(page)).toBeVisible();
 });
 
-const TABS = ["Browse", "Map", "Post", "Saved", "Messages", "Profile"] as const;
+// Post lives in the Browse header (the "+" button), not in the bottom tab bar.
+const TABS = ["Browse", "Map", "Saved", "Messages", "Profile"] as const;
 
 test.describe("tab navigation", () => {
+  test("Post opens from the Browse header", async ({ page }) => {
+    await page.getByRole("button", { name: "Post a listing" }).click();
+    await expect(page.getByText("Your listings")).toBeVisible();
+    await expect(page.locator(".app-main")).not.toBeEmpty();
+  });
+
   for (const tab of TABS) {
     test(`${tab} opens and marks itself active`, async ({ page }) => {
       await app.nav(page, tab).click();
@@ -67,7 +74,7 @@ test.describe("listing detail routing", () => {
     await expect(page.locator(".nav-item")).toHaveCount(0);
 
     await page.getByRole("button", { name: "Back" }).click();
-    await expect(page.locator(".nav-item")).toHaveCount(6);
+    await expect(page.locator(".nav-item")).toHaveCount(TABS.length);
   });
 });
 
